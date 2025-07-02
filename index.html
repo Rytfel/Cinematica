@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Interactivo de Cinemática</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+        startup: {
+          ready: () => {
+            MathJax.startup.defaultReady();
+            MathJax.startup.promise.then(() => {
+              console.log('MathJax Carga y Lista');
+            });
+          }
+        }
+      };
+    </script>
+    <!-- Visualization & Content Choices:
+        - Fundamentos: LaTeX para ecuaciones (vía MathJax CDN).
+        - Análisis - Caída Libre:
+            - Goal: Calcular g, vf. Method: JS calculator. Interaction: User inputs altura, tiempo. Justification: Aplicación directa de fórmulas. Library: Vanilla JS.
+            - Goal: Mostrar gráfica y-t. Method: Chart.js line chart (parabólica). Interaction: Actualizar basada en entradas de calculadora o datos de ejemplo. Justification: Comprensión visual del movimiento acelerado. Library: Chart.js.
+            - Goal: Mostrar gráfica v-t. Method: Chart.js line chart (lineal). Interaction: Actualizar basada en entradas de calculadora o datos de ejemplo. Justification: Comprensión visual de la aceleración constante. Library: Chart.js.
+        - Análisis - Lanzamiento Vertical:
+            - Goal: Calcular vi, y_max. Method: JS calculator. Interaction: User inputs tiempo total de vuelo. Justification: Aplicación directa de fórmulas. Library: Vanilla JS.
+            - Goal: Mostrar gráfica y-t. Method: Chart.js line chart (parábola invertida). Interaction: Actualizar basada en entradas de calculadora o datos de ejemplo. Justification: Comprensión visual del componente del movimiento de proyectil. Library: Chart.js.
+            - Goal: Mostrar gráfica v-t. Method: Chart.js line chart (lineal, pendiente negativa). Interaction: Actualizar basada en entradas de calculadora o datos de ejemplo. Justification: Comprensión visual del cambio de velocidad. Library: Chart.js.
+        - NO SVG/Mermaid used. Todos los visuales son HTML/CSS/Tailwind o canvas de Chart.js. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-button.active {
+            border-color: #0284c7; /* sky-600 */
+            color: #0284c7;
+            font-weight: 600;
+        }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Tailwind max-w-2xl */
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px; /* Tailwind h-80 */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 384px; /* Tailwind h-96 */
+            }
+        }
+        mjx-container { text-align: left !important; }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800">
+
+    <header class="bg-sky-700 text-white p-6 shadow-md">
+        <div class="container mx-auto max-w-5xl text-center">
+            <h1 class="text-3xl font-bold">Laboratorio Interactivo de Cinemática</h1>
+            <p class="mt-1 text-sky-100">Caída Libre y Lanzamiento Vertical</p>
+        </div>
+    </header>
+
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto max-w-5xl flex justify-center space-x-2 sm:space-x-4 p-3 overflow-x-auto">
+            <button data-tab="inicio" class="tab-button text-sm sm:text-base py-2 px-3 border-b-2 border-transparent hover:border-sky-500 hover:text-sky-600 transition-colors duration-150 active">Inicio</button>
+            <button data-tab="fundamentos" class="tab-button text-sm sm:text-base py-2 px-3 border-b-2 border-transparent hover:border-sky-500 hover:text-sky-600 transition-colors duration-150">Fundamentos</button>
+            <button data-tab="procedimiento" class="tab-button text-sm sm:text-base py-2 px-3 border-b-2 border-transparent hover:border-sky-500 hover:text-sky-600 transition-colors duration-150">Procedimiento</button>
+            <button data-tab="analisis" class="tab-button text-sm sm:text-base py-2 px-3 border-b-2 border-transparent hover:border-sky-500 hover:text-sky-600 transition-colors duration-150">Análisis y Gráficos</button>
+            <button data-tab="seguridad" class="tab-button text-sm sm:text-base py-2 px-3 border-b-2 border-transparent hover:border-sky-500 hover:text-sky-600 transition-colors duration-150">Seguridad</button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
+        <section id="inicio" class="content-section active bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-sky-700 mb-4">¡Bienvenido al Laboratorio de Cinemática!</h2>
+            <p class="mb-4">Esta aplicación interactiva te guiará a través de los conceptos de caída libre y lanzamiento vertical. Aquí podrás explorar los fundamentos teóricos, entender el procedimiento experimental, realizar análisis de datos simulados y visualizar el movimiento mediante gráficas interactivas.</p>
+            <p class="mb-4">La cinemática es la rama de la física que describe el movimiento de los objetos sin considerar las fuerzas que lo causan. En este laboratorio, nos enfocaremos en cómo los objetos se mueven bajo la influencia de la gravedad.</p>
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+                <div class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                    <h3 class="text-xl font-medium text-sky-600 mb-2">Caída Libre</h3>
+                    <p class="text-sm">Explora el movimiento de un objeto cuando solo la fuerza de la gravedad actúa sobre él. Entiende cómo la aceleración debida a la gravedad ($g$) afecta su caída.</p>
+                </div>
+                <div class="bg-stone-50 p-4 rounded-lg border border-stone-200">
+                    <h3 class="text-xl font-medium text-sky-600 mb-2">Lanzamiento Vertical</h3>
+                    <p class="text-sm">Analiza el movimiento de un objeto lanzado hacia arriba o hacia abajo, observando cómo su velocidad cambia y cómo alcanza su altura máxima antes de regresar.</p>
+                </div>
+            </div>
+            <p class="mt-6 text-sm text-stone-600">Utiliza la navegación superior para moverte por las diferentes secciones del laboratorio. ¡Esperamos que esta herramienta te sea de gran utilidad para tu aprendizaje!</p>
+        </section>
+
+        <section id="fundamentos" class="content-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-sky-700 mb-4">Fundamento Teórico</h2>
+            <p class="mb-4">Para describir el movimiento en caída libre y lanzamiento vertical, usamos las ecuaciones de la cinemática para movimiento con aceleración constante. La aceleración constante es la debida a la gravedad ($g$), que apunta hacia abajo (aproximadamente $9.8 \, \text{m/s}^2$).</p>
+            <p class="mb-4">Si definimos la dirección hacia arriba como positiva y hacia abajo como negativa, entonces la aceleración $a = -g$. Las ecuaciones clave son:</p>
+            <div class="space-y-3 text-lg bg-stone-50 p-4 rounded-md border border-stone-200">
+                <p>1. Velocidad final: $v_f = v_i + at$</p>
+                <p>2. Desplazamiento: $\Delta y = v_i t + \frac{1}{2}at^2$</p>
+                <p>3. Velocidad final al cuadrado: $v_f^2 = v_i^2 + 2a\Delta y$</p>
+            </div>
+            <p class="mt-4 mb-2">Donde:</p>
+            <ul class="list-disc list-inside ml-4 space-y-1 text-sm">
+                <li>$v_f$: velocidad final</li>
+                <li>$v_i$: velocidad inicial</li>
+                <li>$a$: aceleración (en este caso, $-g$ si arriba es positivo)</li>
+                <li>$t$: tiempo</li>
+                <li>$\Delta y$: cambio en la posición vertical (altura)</li>
+            </ul>
+            <div class="mt-6">
+                <h3 class="text-xl font-medium text-sky-600 mb-2">Caída Libre</h3>
+                <p class="text-sm">En la caída libre (soltando un objeto desde el reposo), la velocidad inicial $v_i = 0$. Las ecuaciones se simplifican. Por ejemplo, $\Delta y = \frac{1}{2}at^2$.</p>
+            </div>
+            <div class="mt-4">
+                <h3 class="text-xl font-medium text-sky-600 mb-2">Lanzamiento Vertical</h3>
+                <p class="text-sm">En el lanzamiento vertical, $v_i$ es la velocidad con la que se lanza el objeto. Si se lanza hacia arriba, $v_i$ es positiva. En el punto más alto, $v_f = 0$. La aceleración $a = -g$ durante todo el trayecto.</p>
+            </div>
+        </section>
+
+        <section id="procedimiento" class="content-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-sky-700 mb-6">Procedimiento Experimental</h2>
+            <p class="mb-6 text-sm">Esta sección describe los pasos generales para realizar los experimentos de caída libre y lanzamiento vertical, tal como se indica en la guía de laboratorio. El objetivo es medir tiempos y distancias para luego analizar el movimiento.</p>
+
+            <div class="mb-8 p-4 border border-sky-200 rounded-lg bg-sky-50">
+                <h3 class="text-xl font-medium text-sky-600 mb-3">Parte 1: Caída Libre</h3>
+                <h4 class="font-semibold mb-1">Preparación:</h4>
+                <ul class="list-disc list-inside ml-4 mb-3 text-sm space-y-1">
+                    <li>Elegir un lugar seguro para dejar caer objetos.</li>
+                    <li>Medir y registrar una altura de caída ($\Delta y$) específica (ej. $2 \, \text{m}$).</li>
+                    <li>Asignar roles: soltar objeto, cronometrar, registrar datos.</li>
+                </ul>
+                <h4 class="font-semibold mb-1">Medición:</h4>
+                <ul class="list-disc list-inside ml-4 text-sm space-y-1">
+                    <li>Soltar el objeto desde la altura medida e iniciar el cronómetro simultáneamente.</li>
+                    <li>Detener el cronómetro cuando el objeto toque el suelo.</li>
+                    <li>Registrar el tiempo ($t$).</li>
+                    <li>Repetir 5 veces por objeto y probar con al menos 3 objetos diferentes.</li>
+                </ul>
+            </div>
+
+            <div class="p-4 border border-teal-200 rounded-lg bg-teal-50">
+                <h3 class="text-xl font-medium text-teal-600 mb-3">Parte 2: Lanzamiento Vertical (Hacia Arriba)</h3>
+                <h4 class="font-semibold mb-1">Preparación:</h4>
+                <ul class="list-disc list-inside ml-4 mb-3 text-sm space-y-1">
+                    <li>Elegir un objeto fácil de lanzar consistentemente.</li>
+                    <li>Asignar roles: lanzar, cronometrar, registrar datos.</li>
+                    <li>Decidir un punto de referencia para el lanzamiento.</li>
+                </ul>
+                <h4 class="font-semibold mb-1">Medición:</h4>
+                <ul class="list-disc list-inside ml-4 text-sm space-y-1">
+                    <li>Lanzar el objeto verticalmente hacia arriba.</li>
+                    <li>Iniciar el cronómetro al soltar y detenerlo cuando regrese al punto de lanzamiento ($t_{total}$).</li>
+                    <li>Estimar o medir la altura máxima alcanzada ($\Delta y_{max}$).</li>
+                    <li>Repetir 5 veces.</li>
+                </ul>
+            </div>
+             <p class="mt-6 text-xs text-stone-500">Nota: Las tablas de datos originales de la guía se utilizan para registrar mediciones reales. Aquí, nos enfocaremos en los cálculos y simulaciones basadas en estos procedimientos.</p>
+        </section>
+
+        <section id="analisis" class="content-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-sky-700 mb-6">Análisis Interactivo y Gráficos</h2>
+            <p class="mb-6 text-sm">Utiliza las herramientas a continuación para simular los cálculos y visualizar los gráficos descritos en la guía. Puedes ingresar tus propios datos (o los de ejemplo) para observar los resultados.</p>
+
+            <div class="mb-10 p-4 border border-sky-200 rounded-lg bg-sky-50">
+                <h3 class="text-xl font-medium text-sky-600 mb-4">Simulador de Caída Libre</h3>
+                <p class="text-xs mb-4">Ingresa la altura desde la que se suelta un objeto y el tiempo promedio que tardó en caer. La calculadora te mostrará el valor experimental de 'g' y la velocidad final.</p>
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="alturaCaida" class="block text-sm font-medium text-stone-700">Altura ($\Delta y$) (metros):</label>
+                        <input type="number" id="alturaCaida" value="2" class="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="tiempoCaida" class="block text-sm font-medium text-stone-700">Tiempo promedio de caída ($t$) (segundos):</label>
+                        <input type="number" id="tiempoCaida" value="0.63" class="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                    </div>
+                </div>
+                <button id="btnCalcularCaidaLibre" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition-colors">Calcular Caída Libre</button>
+                <div id="resultadoCaidaLibre" class="mt-4 text-sm space-y-1">
+                    <p>Valor experimental de $g$: <span id="gExperimental" class="font-semibold">--</span> m/s²</p>
+                    <p>Velocidad final ($v_f$): <span id="vfCaidaLibre" class="font-semibold">--</span> m/s</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 mt-8">
+                    <div>
+                        <h4 class="text-lg font-medium text-sky-600 mb-2 text-center">Gráfica: Posición vs. Tiempo</h4>
+                        <div class="chart-container bg-white p-2 rounded shadow">
+                            <canvas id="chartPosCaida"></canvas>
+                        </div>
+                         <p class="text-xs text-center mt-1 text-stone-500">Muestra cómo la distancia aumenta cuadráticamente con el tiempo.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-medium text-sky-600 mb-2 text-center">Gráfica: Velocidad vs. Tiempo</h4>
+                        <div class="chart-container bg-white p-2 rounded shadow">
+                            <canvas id="chartVelCaida"></canvas>
+                        </div>
+                        <p class="text-xs text-center mt-1 text-stone-500">Muestra cómo la velocidad aumenta linealmente. La pendiente es 'g'.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border border-teal-200 rounded-lg bg-teal-50">
+                <h3 class="text-xl font-medium text-teal-600 mb-4">Simulador de Lanzamiento Vertical</h3>
+                 <p class="text-xs mb-4">Ingresa el tiempo total de vuelo de un objeto lanzado verticalmente hacia arriba. Se usará $g = 9.8 \, \text{m/s}^2$. La calculadora mostrará el tiempo de subida, la velocidad inicial y la altura máxima.</p>
+                <div>
+                    <label for="tiempoVueloTotal" class="block text-sm font-medium text-stone-700">Tiempo total de vuelo ($t_{total}$) (segundos):</label>
+                    <input type="number" id="tiempoVueloTotal" value="3" class="mt-1 block w-full md:w-1/2 px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm">
+                </div>
+                <button id="btnCalcularLanzamiento" class="mt-3 bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 transition-colors">Calcular Lanzamiento Vertical</button>
+                <div id="resultadoLanzamiento" class="mt-4 text-sm space-y-1">
+                    <p>Tiempo de subida ($t_{subida}$): <span id="tSubida" class="font-semibold">--</span> s</p>
+                    <p>Velocidad inicial ($v_i$): <span id="viLanzamiento" class="font-semibold">--</span> m/s</p>
+                    <p>Altura máxima ($\Delta y_{max}$): <span id="yMaxLanzamiento" class="font-semibold">--</span> m</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 mt-8">
+                    <div>
+                        <h4 class="text-lg font-medium text-teal-600 mb-2 text-center">Gráfica: Posición vs. Tiempo</h4>
+                        <div class="chart-container bg-white p-2 rounded shadow">
+                            <canvas id="chartPosLanzamiento"></canvas>
+                        </div>
+                        <p class="text-xs text-center mt-1 text-stone-500">Muestra la trayectoria parabólica (altura vs. tiempo).</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-medium text-teal-600 mb-2 text-center">Gráfica: Velocidad vs. Tiempo</h4>
+                        <div class="chart-container bg-white p-2 rounded shadow">
+                            <canvas id="chartVelLanzamiento"></canvas>
+                        </div>
+                        <p class="text-xs text-center mt-1 text-stone-500">Muestra cómo la velocidad disminuye, se hace cero, y luego se vuelve negativa.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="seguridad" class="content-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-sky-700 mb-4">Precauciones de Seguridad</h2>
+            <p class="mb-4">Es crucial seguir estas precauciones al realizar cualquier experimento físico para garantizar tu seguridad y la de los demás:</p>
+            <ul class="list-disc list-inside ml-4 space-y-2 text-sm bg-amber-50 p-4 rounded-md border border-amber-200">
+                <li>Asegúrate de que el área de trabajo esté despejada para evitar tropiezos o accidentes.</li>
+                <li>Ten cuidado al soltar objetos desde alturas. Asegúrate de que nadie esté debajo.</li>
+                <li>No lances objetos hacia otras personas.</li>
+                <li>Si usas una silla o mesa para la altura, asegúrate de que sea estable y no se tambalee.</li>
+                <li>No lances objetos que puedan romperse o causar daños.</li>
+                <li>Siempre sigue las indicaciones específicas de tu profesor o instructor.</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="bg-stone-800 text-stone-300 text-center p-6 mt-10">
+        <p class="text-sm">&copy; 2024 Laboratorio Interactivo de Cinemática. Creado para fines educativos.</p>
+    </footer>
+
+<script>
+    const tabs = document.querySelectorAll('.tab-button');
+    const contentSections = document.querySelectorAll('.content-section');
+    let chartPosCaida, chartVelCaida, chartPosLanzamiento, chartVelLanzamiento;
+
+    const g_tierra = 9.80665; // m/s^2
+
+    function initCharts() {
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { 
+                    title: { display: true, text: 'Tiempo (s)', color: '#44403c' }, // stone-700
+                    grid: { color: '#e7e5e420' } // stone-200 with alpha
+                },
+                y: { 
+                    title: { display: true, color: '#44403c' }, 
+                    grid: { color: '#e7e5e450' } // stone-200 with alpha
+                }
+            },
+            plugins: {
+                legend: { labels: { color: '#44403c' } } // stone-700
+            },
+            animation: { duration: 500 }
+        };
+
+        const ctxPosCaida = document.getElementById('chartPosCaida').getContext('2d');
+        chartPosCaida = new Chart(ctxPosCaida, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Posición (m)', data: [], borderColor: '#0ea5e9', /* sky-500 */ tension: 0.1, fill: false }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Posición (m)'} } } }
+        });
+
+        const ctxVelCaida = document.getElementById('chartVelCaida').getContext('2d');
+        chartVelCaida = new Chart(ctxVelCaida, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Velocidad (m/s)', data: [], borderColor: '#14b8a6', /* teal-500 */ fill: false }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Velocidad (m/s)'} } } }
+        });
+        
+        const ctxPosLanzamiento = document.getElementById('chartPosLanzamiento').getContext('2d');
+        chartPosLanzamiento = new Chart(ctxPosLanzamiento, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Altura (m)', data: [], borderColor: '#0ea5e9', tension: 0.1, fill: false }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Altura (m)'} } } }
+        });
+
+        const ctxVelLanzamiento = document.getElementById('chartVelLanzamiento').getContext('2d');
+        chartVelLanzamiento = new Chart(ctxVelLanzamiento, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Velocidad (m/s)', data: [], borderColor: '#14b8a6', fill: false }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { ...commonOptions.scales.y.title, text: 'Velocidad (m/s)'} } } }
+        });
+    }
+
+    function updateChartData(chart, newLabels, newData) {
+        chart.data.labels = newLabels;
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data = newData;
+        });
+        chart.update();
+    }
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(item => item.classList.remove('active'));
+            tab.classList.add('active');
+            const targetTab = tab.getAttribute('data-tab');
+            contentSections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === targetTab) {
+                    section.classList.add('active');
+                }
+            });
+            if (targetTab === 'analisis' && typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                 MathJax.typesetPromise();
+            }
+        });
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        initCharts();
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+            MathJax.typesetPromise();
+        } else {
+            console.warn('MathJax no está listo en DOMContentLoaded');
+        }
+
+        document.getElementById('btnCalcularCaidaLibre').addEventListener('click', () => {
+            const deltaY = parseFloat(document.getElementById('alturaCaida').value);
+            const t = parseFloat(document.getElementById('tiempoCaida').value);
+
+            if (isNaN(deltaY) || isNaN(t) || t <= 0 || deltaY <= 0) {
+                alert('Por favor, ingrese valores válidos para altura y tiempo.');
+                return;
+            }
+
+            const gExp = (2 * deltaY) / (t * t);
+            const vf = gExp * t;
+
+            document.getElementById('gExperimental').textContent = gExp.toFixed(2);
+            document.getElementById('vfCaidaLibre').textContent = vf.toFixed(2);
+            
+            const timePoints = Array.from({ length: 11 }, (_, i) => (t / 10) * i);
+            const posYData = timePoints.map(ti => 0.5 * gExp * ti * ti);
+            const velYData = timePoints.map(ti => gExp * ti);
+
+            updateChartData(chartPosCaida, timePoints.map(ti => ti.toFixed(2)), posYData.map(p => p.toFixed(2)));
+            updateChartData(chartVelCaida, timePoints.map(ti => ti.toFixed(2)), velYData.map(v => v.toFixed(2)));
+        });
+
+        document.getElementById('btnCalcularLanzamiento').addEventListener('click', () => {
+            const tTotal = parseFloat(document.getElementById('tiempoVueloTotal').value);
+            const g = g_tierra; 
+
+            if (isNaN(tTotal) || tTotal <= 0) {
+                alert('Por favor, ingrese un tiempo total de vuelo válido.');
+                return;
+            }
+
+            const tSubida = tTotal / 2;
+            const vInicial = g * tSubida;
+            const yMax = (vInicial * tSubida) - (0.5 * g * tSubida * tSubida);
+
+            document.getElementById('tSubida').textContent = tSubida.toFixed(2);
+            document.getElementById('viLanzamiento').textContent = vInicial.toFixed(2);
+            document.getElementById('yMaxLanzamiento').textContent = yMax.toFixed(2);
+
+            const timePoints = Array.from({ length: 21 }, (_, i) => (tTotal / 20) * i);
+            const posYData = timePoints.map(ti => (vInicial * ti) - (0.5 * g * ti * ti));
+            const velYData = timePoints.map(ti => vInicial - (g * ti));
+
+            updateChartData(chartPosLanzamiento, timePoints.map(ti => ti.toFixed(2)), posYData.map(p => Math.max(0, p).toFixed(2))); // No permitir y < 0
+            updateChartData(chartVelLanzamiento, timePoints.map(ti => ti.toFixed(2)), velYData.map(v => v.toFixed(2)));
+        });
+        
+        // Simular click para cargar datos iniciales en gráficos de caída libre
+        document.getElementById('btnCalcularCaidaLibre').click();
+        // Simular click para cargar datos iniciales en gráficos de lanzamiento vertical
+        document.getElementById('btnCalcularLanzamiento').click();
+    });
+
+</script>
+</body>
+</html>
